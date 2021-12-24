@@ -1,0 +1,12 @@
+#!/bin/bash
+
+JSON="$1"
+
+RUSTFLAGS=" -A dead_code -A unused_must_used"
+
+echo "config json: $1"
+
+exit 0
+
+cargo build --release
+cat target/release/class_generator $1

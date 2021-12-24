@@ -1,7 +1,7 @@
 extern crate serde_json;
 use serde::Deserialize;
 use std::fs::File;
-use std::io::{stdin, stdout, Write};
+use std::io::{stdin, stdout, stderr, Write};
 use std::process::exit;
 
 #[derive(Deserialize, Debug)]
@@ -23,13 +23,21 @@ struct Class {
 }
 
 fn main() {
+
+    // verifying command line argumment
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() != 2 {
+        writeln!(stderr(), "Usage: ../class_generator json_path");
+        exit(1);
+    }
+
     let json_content = std::fs::read_to_string("example/weapon.json")
         .expect("Something went wrong reading from the file");
 
     let class: Class = serde_json::from_str(&json_content)
         .expect("Failed to deseerialize json content into 'Class' struct");
 
-    //dbg!(&class);
+    dbg!(&class);
 
     // check header file if exists and overwrite if permited
     let header_name = format!("{}.hpp", class.name);
@@ -93,16 +101,17 @@ fn main() {
 }
 
 fn ask_for_overwrite() {
+    writeln();
     writeln!(&mut stdout(), "File Already exist!");
     write!(&mut stdout(), "Overwrite file? [Y/n]: ");
-    stdout().flush();
+    stdout().flush()
+        .expect("Failed to flush file buffer");
+
     let mut input = String::new();
-    stdin()
-        .read_line(&mut input)
-        .expect("failed to read from stdin");
-    let answer: String = input.parse().expect("failed to parse input from stdin");
-    let answer_lowercase = answer.to_lowercase();
-    if answer_lowercase.ne("y") || answer_lowercase.ne("yes") {
+    stdin().read_line(&mut input).unwrap();
+
+    let answer: String = input.parse::<String>().unwrap().to_lowercase();
+    if answer.ne("y") && answer.ne("yes") {
         exit(0);
     }
 }
