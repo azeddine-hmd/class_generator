@@ -6,6 +6,7 @@ use std::io::{stderr, stdin, stdout, Write};
 #[derive(Deserialize, Debug)]
 struct Variable {
     name: String,
+    #[serde(rename = "access_modifier")]
     acc_mod: String,
     #[serde(rename = "type")]
     data_type: String,
@@ -27,10 +28,11 @@ fn main() {
     let jpath: String = get_jpath();
     dbg!(&jpath);
 
-    let jcontent = std::fs::read_to_string(jpath).unwrap();
+    let jcontent: String = std::fs::read_to_string(jpath).unwrap();
 
     // mapping json content into class struct
-    let class: Class = serde_json::from_value(serde_json::Value::String(jcontent)).unwrap();
+    let class: Class = serde_json::from_str(&jcontent).unwrap();
+    drop(jcontent);
     dbg!(&class);
 
     // generating header file code
@@ -97,6 +99,13 @@ fn get_jpath() -> String{
     args.get(1).unwrap().clone()
 }
 
+fn prefix_name(name: &str) -> String {
+    let mut name_prefixed = String::from("m");
+    let name_cl: String = to_capital_letter(name);
+    name_prefixed.push_str(&name_cl);
+    name_prefixed
+}
+
 fn generate_header_code(hfile: File, class: &Class) {
     // top guard macro
     writeln!(
@@ -129,11 +138,8 @@ fn generate_header_code(hfile: File, class: &Class) {
         .collect();
     if !vars.is_empty() {
         for var in &vars {
-            let mut name_prefixed = String::from("m");
-            let name_cl: String = to_capital_letter(&var.name);
-            name_prefixed.push_str(&name_cl);
-
-            writeln!(&hfile, "\t{}\t{};", var.data_type, name_prefixed).unwrap();
+            let prefixed_name = prefix_name(&var.name);
+            writeln!(&hfile, "\t{}\t{};", var.data_type, prefixed_name).unwrap();
         }
         writeln!(&hfile).unwrap();
     }
@@ -188,5 +194,26 @@ fn generate_header_code(hfile: File, class: &Class) {
 }
 
 fn generate_source_code(cfile: File, class: &Class) {
+    // include
+    writeln!(&cfile, "#include \"{}.hpp\"\n", class.name).unwrap();
 
+    // default constructor
+    writeln!(&cfile, "{}::{}( void ) {{}}\n", class.name, class.name).unwrap();
+
+    let mut initializer = String::new();
+    {
+        for (i, var) in class.vars.iter().enumerate() {
+            let prefixed_name = prefix_name(&var.name);
+            let name_cl = to_capital_letter(&var.name);
+
+            if i > 0 {
+                initializer.push_str(", ");
+            }
+            initializer.push_str(&format!("{}(copy.get{}())", &prefixed_name, &name_cl));
+        }
+    }
+    dbg!(&initializer);
+
+    // copy construct
+    write!(&cfile, "{}::{}( {} const& copy ): {} {{}}\n\n", class.name, class.name, class.name, initializer).unwrap();
 }

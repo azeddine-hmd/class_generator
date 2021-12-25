@@ -1,8 +1,0 @@
-#!/bin/bash
-
-JSON="$1"
-
-RUSTFLAGS=" -A dead_code -A unused_must_used"
-
-cargo build --release
-target/release/class_generator $1
