@@ -1,117 +1,192 @@
 extern crate serde_json;
 use serde::Deserialize;
 use std::fs::File;
-use std::io::{stdin, stdout, stderr, Write};
-use std::process::exit;
+use std::io::{stderr, stdin, stdout, Write};
 
 #[derive(Deserialize, Debug)]
 struct Variable {
     name: String,
-
-    access_modifier: String,
-
+    acc_mod: String,
     #[serde(rename = "type")]
-    variable_type: String,
+    data_type: String,
 }
 
 #[derive(Deserialize, Debug)]
 struct Class {
     name: String,
-
     #[serde(rename = "variables")]
-    variables: Vec<Variable>,
+    vars: Vec<Variable>,
+}
+
+enum FileExt {
+    Header,
+    Source,
 }
 
 fn main() {
+    let jpath: String = get_jpath();
+    dbg!(&jpath);
 
-    // verifying command line argumment
-    let args: Vec<String> = std::env::args().collect();
-    if args.len() != 2 {
-        writeln!(stderr(), "Usage: ../class_generator json_path");
-        exit(1);
-    }
+    let jcontent = std::fs::read_to_string(jpath).unwrap();
 
-    let json_content = std::fs::read_to_string("example/weapon.json")
-        .expect("Something went wrong reading from the file");
-
-    let class: Class = serde_json::from_str(&json_content)
-        .expect("Failed to deseerialize json content into 'Class' struct");
-
+    // mapping json content into class struct
+    let class: Class = serde_json::from_value(serde_json::Value::String(jcontent)).unwrap();
     dbg!(&class);
 
-    // check header file if exists and overwrite if permited
-    let header_name = format!("{}.hpp", class.name);
-    if std::path::Path::new(&header_name).exists() {
-        ask_for_overwrite();
+    // generating header file code
+    let hfile = create_file(FileExt::Header, &class.name);
+    generate_header_code(hfile, &class);
+    println!("Code generated successfully for header file!");
+
+    // generating source file code
+    let cfile = create_file(FileExt::Source, &class.name);
+    generate_source_code(cfile, &class);
+    println!("Code generated successfully for source file!");
+}
+
+fn ask_for_overwrite() {
+    writeln!(&mut stdout(), "File Already exist!").unwrap();
+    write!(&mut stdout(), "Overwrite file? [Y/n]: ").unwrap();
+    stdout().flush().expect("Failed to flush file buffer");
+
+    let mut input = String::new();
+    stdin().read_line(&mut input).unwrap();
+
+    let answer = input.parse::<String>().unwrap().to_lowercase();
+    let answer = answer.trim();
+    if answer.ne("y") && answer.ne("yes") {
+        std::process::exit(0);
+    }
+}
+
+fn to_capital_letter(s: &str) -> String {
+    let mut c = s.chars();
+    match c.next() {
+        None => String::new(),
+        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+    }
+}
+
+fn create_file(file_ext: FileExt, class_name: &str) -> File {
+    match file_ext {
+        FileExt::Header => {
+            let header_name = format!("{}.hpp", class_name);
+            if std::path::Path::new(&header_name).exists() {
+                ask_for_overwrite();
+            }
+            File::create(header_name).expect("Failed to create header file")
+        }
+        FileExt::Source => {
+            let source_name = format!("{}.cpp", class_name);
+            if std::path::Path::new(&source_name).exists() {
+                ask_for_overwrite();
+            }
+            File::create(source_name).expect("Failed to create source file")
+        }
+    }
+}
+
+fn get_jpath() -> String{
+    let args: Vec<String> = std::env::args().collect();
+
+    if args.len() != 2 {
+        writeln!(stderr(), "Usage: ../class_generator json_path").unwrap();
+        std::process::exit(1);
     }
 
-    // create header file
-    let mut header_file = File::create(header_name).expect("failed to create target file");
+    args.get(1).unwrap().clone()
+}
 
-    // write begining of guard macro
+fn generate_header_code(hfile: File, class: &Class) {
+    // top guard macro
     writeln!(
-        &mut header_file,
+        &hfile,
         "#ifndef {}_HPP",
         class.name.to_uppercase()
     )
     .unwrap();
     writeln!(
-        &mut header_file,
+        &hfile,
         "#define {}_HPP\n",
         class.name.to_uppercase()
     )
     .unwrap();
 
-    // write class
-    writeln!(&mut header_file, "class {} {{", class.name);
+    // begin class
+    writeln!(&hfile, "class {} {{", class.name).unwrap();
 
     // write member varaibles
-    let variables: Vec<&Variable> = class
-        .variables
+    let vars: Vec<&Variable> = class
+        .vars
         .iter()
-        .filter_map(|variable| {
-            if variable.access_modifier.eq("private") {
-                return Some(variable);
+        .filter_map(|var| {
+            if var.acc_mod.eq("private") {
+                return Some(var);
             } else {
                 return None;
             }
         })
         .collect();
-    if !variables.is_empty() {
-        for variable in variables {
-            writeln!(&mut header_file, "\t{}\t{};", variable.variable_type, variable.name);
+    if !vars.is_empty() {
+        for var in &vars {
+            let mut name_prefixed = String::from("m");
+            let name_cl: String = to_capital_letter(&var.name);
+            name_prefixed.push_str(&name_cl);
+
+            writeln!(&hfile, "\t{}\t{};", var.data_type, name_prefixed).unwrap();
         }
-        writeln!(&mut header_file);
+        writeln!(&hfile).unwrap();
     }
 
     // public
-    writeln!(&mut header_file, "public:");
+    writeln!(&hfile, "public:").unwrap();
 
     // constructor
-    //TODO: continue
-    //writeln!(&mut head_file)
+    writeln!(&hfile, "\t{}( void );", class.name).unwrap();
 
-    // end of class
-    writeln!(&mut header_file, "}};");
+    // copy constructor
+    writeln!(
+        &hfile,
+        "\t{}( {} const& copy );",
+        class.name, class.name
+    )
+    .unwrap();
 
-    // end of guard macro
-    writeln!(&mut header_file, "\n#endif");
+    // deconstructor
+    writeln!(&hfile, "\t~{}( void );", class.name).unwrap();
 
-    println!("Code generated successfully!");
+    // assignamnet overloading
+    writeln!(
+        &hfile,
+        "\t{}&\toperator=( {} const& other );",
+        class.name, class.name
+    )
+    .unwrap();
+
+    // getters and setters
+    for var in &vars {
+        let name_cl = to_capital_letter(&var.name);
+        writeln!(
+            &hfile,
+            "\t{} const&\tget{}( void );",
+            var.data_type, name_cl
+        )
+        .unwrap();
+        writeln!(
+            &hfile,
+            "\tvoid\tset{}( {} const& {} );",
+            name_cl, var.data_type, var.name
+        )
+        .unwrap();
+    }
+
+    // end class
+    writeln!(&hfile, "}};").unwrap();
+
+    // Bottom guard macro
+    writeln!(&hfile, "\n#endif").unwrap();
 }
 
-fn ask_for_overwrite() {
-    writeln();
-    writeln!(&mut stdout(), "File Already exist!");
-    write!(&mut stdout(), "Overwrite file? [Y/n]: ");
-    stdout().flush()
-        .expect("Failed to flush file buffer");
+fn generate_source_code(cfile: File, class: &Class) {
 
-    let mut input = String::new();
-    stdin().read_line(&mut input).unwrap();
-
-    let answer: String = input.parse::<String>().unwrap().to_lowercase();
-    if answer.ne("y") && answer.ne("yes") {
-        exit(0);
-    }
 }
