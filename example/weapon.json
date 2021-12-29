@@ -1,5 +1,10 @@
 {
-	"name": "Test",
+	"name": "Weapon",
 	"variables": [
+		{
+			"access_modifier": "private",
+			"type": "std::string",
+			"name": "name"
+		}
 	]
 }
