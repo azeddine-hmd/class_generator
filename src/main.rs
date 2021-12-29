@@ -5,7 +5,7 @@ pub mod header;
 pub mod source;
 pub mod utils;
 
-use data::{Class, Variable, FileExt};
+use data::{Class, FileExt};
 
 fn main() {
     let jpath: String = utils::json_path();
@@ -16,12 +16,12 @@ fn main() {
     let class: Class = serde_json::from_str(&jcontent).unwrap();
 
     // generating header file code
-    let hfile = utils::create_file(FileExt::Header, &class.name);
+    let hfile = utils::create_file(FileExt::Hpp, &class.name);
     header::generate_header_code(hfile, &class).unwrap();
     println!("Code generated successfully for header file!");
 
     // generating source file code
-    let cfile = utils::create_file(FileExt::Source, &class.name);
+    let cfile = utils::create_file(FileExt::Cpp, &class.name);
     source::generate_source_code(cfile, &class).unwrap();
     println!("Code generated successfully for source file!");
 }

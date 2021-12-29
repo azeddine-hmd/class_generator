@@ -17,6 +17,6 @@ pub struct Class {
 }
 
 pub enum FileExt {
-    Header,
-    Source,
+    Hpp,
+    Cpp,
 }

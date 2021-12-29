@@ -1,4 +1,4 @@
-use crate::data::FileExt;
+use crate::data::{FileExt, Variable};
 use std::fs::File;
 use std::io::{self, Write};
 
@@ -50,14 +50,14 @@ pub fn ask_for_overwrite() {
 
 pub fn create_file(file_ext: FileExt, class_name: &str) -> File {
     match file_ext {
-        FileExt::Header => {
+        FileExt::Hpp => {
             let header_name = format!("{}.hpp", class_name);
             if std::path::Path::new(&header_name).exists() {
                 ask_for_overwrite();
             }
             File::create(header_name).expect("Failed to create header file")
         }
-        FileExt::Source => {
+        FileExt::Cpp => {
             let source_name = format!("{}.cpp", class_name);
             if std::path::Path::new(&source_name).exists() {
                 ask_for_overwrite();
@@ -65,4 +65,17 @@ pub fn create_file(file_ext: FileExt, class_name: &str) -> File {
             File::create(source_name).expect("Failed to create source file")
         }
     }
+}
+
+pub fn member_variables(vars: &Vec<Variable>) -> Vec<&Variable> {
+    vars
+        .iter()
+        .filter_map(|var| {
+            if var.acc_mod.eq("private") {
+                return Some(var);
+            } else {
+                return None;
+            }
+        })
+    .collect()
 }
