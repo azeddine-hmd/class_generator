@@ -16,7 +16,7 @@ pub struct Class {
     pub vars: Vec<Variable>,
 }
 
-pub enum FileExt {
+pub enum FileType {
     Hpp,
     Cpp,
 }

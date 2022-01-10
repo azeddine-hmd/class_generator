@@ -61,7 +61,7 @@ fn assignament(hfile: &mut File, class: &Class) -> Result<()> {
 fn getters_setters(hfile: &mut File, class: &Class) -> Result<()> {
     for var in &class.vars {
         let name_cl = utils::to_cap(&var.name);
-        writeln!(hfile, "\t{} const&\tget{}( void );", var.data_type, name_cl)?;
+        writeln!(hfile, "\t{} const&\tget{}( void ) const;", var.data_type, name_cl)?;
         writeln!(
             hfile,
             "\tvoid\tset{}( {} const& {} );",

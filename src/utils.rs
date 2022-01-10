@@ -1,4 +1,4 @@
-use crate::data::{FileExt, Variable};
+use crate::data::{FileType, Variable};
 use std::fs::File;
 use std::io::{self, Write};
 
@@ -48,16 +48,16 @@ pub fn ask_for_overwrite() {
     }
 }
 
-pub fn create_file(file_ext: FileExt, class_name: &str) -> File {
+pub fn create_file(file_ext: FileType, class_name: &str) -> File {
     match file_ext {
-        FileExt::Hpp => {
+        FileType::Hpp => {
             let header_name = format!("{}.hpp", class_name);
             if std::path::Path::new(&header_name).exists() {
                 ask_for_overwrite();
             }
             File::create(header_name).expect("Failed to create header file")
         }
-        FileExt::Cpp => {
+        FileType::Cpp => {
             let source_name = format!("{}.cpp", class_name);
             if std::path::Path::new(&source_name).exists() {
                 ask_for_overwrite();
