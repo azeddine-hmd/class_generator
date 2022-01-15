@@ -64,7 +64,7 @@ fn getters_setters(hfile: &mut File, class: &Class) -> Result<()> {
         writeln!(hfile, "\t{} const&\tget{}( void ) const;", var.data_type, name_cl)?;
         writeln!(
             hfile,
-            "\tvoid\tset{}( {} const& {} );",
+            "\tvoid\tset{}( {}& {} );",
             name_cl, var.data_type, var.name
         )?;
     }

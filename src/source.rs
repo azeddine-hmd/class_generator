@@ -63,7 +63,7 @@ fn getters_setters(cfile: &mut File, class: &Class) -> Result<()> {
         // setter
         writeln!(
             cfile,
-            "\nvoid\t{}::set{}( {} const& {} ) {{",
+            "\nvoid\t{}::set{}( {}& {} ) {{",
             class.name, name_cap, var.data_type, var.name
         )?;
         writeln!(cfile, "\t{} = {};", name_pref, var.name)?;
